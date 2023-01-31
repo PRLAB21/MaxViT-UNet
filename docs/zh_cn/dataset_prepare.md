@@ -119,6 +119,25 @@ mmsegmentation
 │   │   ├── ann_dir
 │   │   │   ├── train
 │   │   │   ├── val
+│   ├── ImageNetS
+│   │   ├── ImageNetS919
+│   │   │   ├── train-semi
+│   │   │   ├── train-semi-segmentation
+│   │   │   ├── validation
+│   │   │   ├── validation-segmentation
+│   │   │   ├── test
+│   │   ├── ImageNetS300
+│   │   │   ├── train-semi
+│   │   │   ├── train-semi-segmentation
+│   │   │   ├── validation
+│   │   │   ├── validation-segmentation
+│   │   │   ├── test
+│   │   ├── ImageNetS50
+│   │   │   ├── train-semi
+│   │   │   ├── train-semi-segmentation
+│   │   │   ├── validation
+│   │   │   ├── validation-segmentation
+│   │   │   ├── test
 ```
 
 ### Cityscapes
@@ -283,6 +302,7 @@ python tools/convert_datasets/vaihingen.py /path/to/vaihingen
 使用我们默认的配置 (`clip_size`=512, `stride_size`=256)， 将生成 344 张图片的训练集和 398 张图片的验证集。
 
 ### iSAID
+
 iSAID 数据集(训练集/验证集/测试集)的图像可以从 [DOTA-v1.0](https://captain-whu.github.io/DOTA/dataset.html) 下载.
 
 iSAID 数据集(训练集/验证集)的注释可以从 [iSAID](https://captain-whu.github.io/iSAID/dataset.html) 下载.
@@ -316,3 +336,31 @@ python tools/convert_datasets/isaid.py /path/to/iSAID
 ```
 
 使用我们默认的配置 (`patch_width`=896, `patch_height`=896,　`overlap_area`=384)， 将生成 33978 张图片的训练集和 11644 张图片的验证集。
+
+### ImageNetS
+
+ImageNet-S是用于[大规模无监督/半监督语义分割](https://arxiv.org/abs/2106.03149)任务的数据集。
+
+ImageNet-S数据集可在[ImageNet-S](https://github.com/LUSSeg/ImageNet-S#imagenet-s-dataset-preparation)获取。
+
+```
+│   ├── ImageNetS
+│   │   ├── ImageNetS919
+│   │   │   ├── train-semi
+│   │   │   ├── train-semi-segmentation
+│   │   │   ├── validation
+│   │   │   ├── validation-segmentation
+│   │   │   ├── test
+│   │   ├── ImageNetS300
+│   │   │   ├── train-semi
+│   │   │   ├── train-semi-segmentation
+│   │   │   ├── validation
+│   │   │   ├── validation-segmentation
+│   │   │   ├── test
+│   │   ├── ImageNetS50
+│   │   │   ├── train-semi
+│   │   │   ├── train-semi-segmentation
+│   │   │   ├── validation
+│   │   │   ├── validation-segmentation
+│   │   │   ├── test
+```

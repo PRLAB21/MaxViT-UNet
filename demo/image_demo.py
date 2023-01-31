@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from argparse import ArgumentParser
 
+from mmcv.cnn.utils.sync_bn import revert_sync_batchnorm
+
 from mmseg.apis import inference_segmentor, init_segmentor, show_result_pyplot
 from mmseg.core.evaluation import get_palette
 
@@ -10,6 +12,7 @@ def main():
     parser.add_argument('img', help='Image file')
     parser.add_argument('config', help='Config file')
     parser.add_argument('checkpoint', help='Checkpoint file')
+    parser.add_argument('--out-file', default=None, help='Path to output file')
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
@@ -25,6 +28,8 @@ def main():
 
     # build the model from a config file and a checkpoint file
     model = init_segmentor(args.config, args.checkpoint, device=args.device)
+    if args.device == 'cpu':
+        model = revert_sync_batchnorm(model)
     # test a single image
     result = inference_segmentor(model, args.img)
     # show the results
@@ -33,7 +38,8 @@ def main():
         args.img,
         result,
         get_palette(args.palette),
-        opacity=args.opacity)
+        opacity=args.opacity,
+        out_file=args.out_file)
 
 
 if __name__ == '__main__':

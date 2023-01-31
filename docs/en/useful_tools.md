@@ -1,7 +1,7 @@
 ## Useful tools
 
 Apart from training/testing scripts, We provide lots of useful tools under the
- `tools/` directory.
+`tools/` directory.
 
 ### Get the FLOPs and params (experimental)
 
@@ -124,7 +124,7 @@ Description of all arguments
 - `--show-dir`: Directory where painted images will be saved
 - `--cfg-options`: Override some settings in the used config file, the key-value pair in `xxx=yyy` format will be merged into config file.
 - `--eval-options`: Custom options for evaluation, the key-value pair in `xxx=yyy` format will be kwargs for `dataset.evaluate()` function
-- `--opacity`: Opacity of painted segmentation map. In (0, 1] range.
+- `--opacity`: Opacity of painted segmentation map. In (0, 1\] range.
 
 #### Results and Models
 
@@ -232,7 +232,7 @@ Only tested on whole mode.
 ### Print the entire config
 
 `tools/print_config.py` prints the whole config verbatim, expanding all its
- imports.
+imports.
 
 ```shell
 python tools/print_config.py \
@@ -381,7 +381,7 @@ fcn
 
 ## Confusion Matrix
 
-In order to generate and plot a ```nxn``` confusion matrix where ```n``` is the number of classes, you can follow the steps:
+In order to generate and plot a `nxn` confusion matrix where `n` is the number of classes, you can follow the steps:
 
 ### 1.Generate a prediction result in pkl format using `test.py`
 
@@ -389,7 +389,7 @@ In order to generate and plot a ```nxn``` confusion matrix where ```n``` is the 
 python tools/test.py ${CONFIG_FILE} ${CHECKPOINT_FILE} [--out ${PATH_TO_RESULT_FILE}]
 ```
 
-Note that the argument for ```--eval``` should be  ```None``` so that the result file contains numpy type of prediction results. The usage for distribution test is just the same.
+Note that the argument for `--eval` should be  `None` so that the result file contains numpy type of prediction results. The usage for distribution test is just the same.
 
 Example:
 
@@ -400,7 +400,7 @@ checkpoint/fcn_r50-d8_512x1024_40k_cityscapes_20200604_192608-efe53f0d.pth \
 --out result/pred_result.pkl
 ```
 
-### 2. Use ```confusion_matrix.py``` to generate and plot a confusion matrix
+### 2. Use `confusion_matrix.py` to generate and plot a confusion matrix
 
 ```shell
 python tools/confusion_matrix.py ${CONFIG_FILE} ${PATH_TO_RESULT_FILE} ${SAVE_DIR} --show
@@ -424,3 +424,32 @@ result/pred_result.pkl \
 result/confusion_matrix \
 --show
 ```
+
+## Model ensemble
+
+To complete the integration of prediction probabilities for multiple models, we provide 'tools/model_ensemble.py'
+
+### Usage
+
+```bash
+python tools/model_ensemble.py \
+  --config ${CONFIG_FILE1} ${CONFIG_FILE2} ... \
+  --checkpoint ${CHECKPOINT_FILE1} ${CHECKPOINT_FILE2} ...\
+  --aug-test \
+  --out ${OUTPUT_DIR}\
+  --gpus ${GPU_USED}\
+```
+
+### Description of all arguments
+
+- `--config`: Path to the config file for the ensemble model
+- `--checkpoint`: Path to the checkpoint file for the ensemble model
+- `--aug-test`: Whether to use flip and multi-scale test
+- `--out`: Save folder for model ensemble results
+- `--gpus`: Gpu-id used for model ensemble
+
+### Result of model ensemble
+
+- The model ensemble will generate an unrendered segmentation mask for each input, the input shape is `[H, W]`, the segmentation mask shape is `[H, W]`, and each pixel-value in the segmentation mask represents the pixel category after segmentation at that position.
+
+- The filename of the model ensemble result will be named in the same filename as `Ground Truth`. If the filename of `Ground Truth` is called `1.png`, the model ensemble result file will also be named `1.png` and placed in the folder specified by `--out`.
