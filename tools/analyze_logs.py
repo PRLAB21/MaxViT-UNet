@@ -62,7 +62,7 @@ def plot_curve(log_dicts, args):
         plt.show()
     else:
         print(f'save curve to: {args.out}')
-        plt.savefig(args.out)
+        plt.savefig(args.out, dpi=300)
         plt.cla()
 
 

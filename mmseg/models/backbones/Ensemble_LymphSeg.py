@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jun 10 10:50:08 2022
+
+@author: zunaira
+"""
+
+# import math
+# from collections import OrderedDict
+
+# import numpy as np
+import torch
+import torch.nn as nn
+# import torch.nn.functional as F
+
+from .LymphSegNet_utils_v2 import * 
+
+from mmcv.runner import BaseModule
+from ..builder import BACKBONES
+
+####
+# Segmentation model with 
+@BACKBONES.register_module()
+class SegLymphNet3(BaseModule): 
+    """Initialise SegLymph-Net."""
+
+    def __init__(self, input_ch=3, debug=False):
+        super(SegLymphNet3, self).__init__()
+        self.module_name = '[SegLymphNet3]'
+        self.debug = debug
+        self.output_ch = 1 
+
+
+        def bottle_neck(in_ch=256, out_ch=512):
+            b1 = nn.Sequential( conv_3x3_bn(in_ch, out_ch, 1), conv2_block(out_ch),
+                                ATT(out_ch), ATT(out_ch), conv_3x3_bnrelu(out_ch))
+            return b1
+
+
+        self.e1 = nn.Sequential(conv_3x3_bn(input_ch, 32, 1),
+                                RET(32),
+                                #conv2_block(32),
+                                MSST(32),
+                                #conv2_block(32),
+                                RET(32),
+                                conv_3x3_bnrelu(32))
+                                #conv2_block(32))
+        self.pool1 = encoder_downsample('maxpool', 2, 2)
+        self.e2 = nn.Sequential(conv_3x3_bn(32, 64, 1),
+                                RET(64),
+                                # conv2_block(64),
+                                MSST(64),
+                                # conv2_block(64),
+                                RET(64),
+                                # conv2_block(64))
+                                conv_3x3_bnrelu(64))
+                                # RDT(128, 128),
+        self.pool2 = encoder_downsample('maxpool', 2, 2)
+        self.e3 = nn.Sequential(conv_3x3_bn(64, 128, 1),
+                                RET(128),
+                                # conv2_block(128),
+                                MSST(128),
+                                # conv2_block(128),
+                                RET(128),
+                                # conv2_block(128)
+                                conv_3x3_bnrelu(128))
+        self.pool3 = encoder_downsample('maxpool', 2, 2)
+        self.e4 = nn.Sequential(conv_3x3_bn(128, 256, 1),
+                                RET(256),
+                                # conv2_block(256),
+                                MSST(256),
+                                # conv2_block(256),
+                                RET(256),
+                                # conv2_block(256),
+                                conv_3x3_bnrelu(256))
+        self.pool4 = encoder_downsample('maxpool', 2, 2)
+            # encoder = nn.Sequential(OrderedDict([("e1", e1), ("e2", e2), ("e3", e3), ("e4", e4)]))
+            # return encoder
+
+
+        self.bottle_neck = bottle_neck()
+
+
+        self.up4 = nn.ConvTranspose2d(512, 256, 2, 2)
+        self.d4 = nn.Sequential(nn.Conv2d(512, 256, 3, stride=1, padding=1, bias=False),
+                                nn.Conv2d(256, 256, 3, stride=1, padding=1, bias=False),
+                                nn.ReLU(inplace=True),
+                                RET(256),
+                                conv_3x3_bnrelu(256))
+
+        self.up3 = nn.ConvTranspose2d(256, 128, 2, 2)
+        self.d3 = nn.Sequential(nn.Conv2d(256, 128, 3, stride=1, padding=1, bias=False),
+                                nn.Conv2d(128, 128, 3, stride=1, padding=1, bias=False),
+                                nn.ReLU(inplace=True),
+                                RET(128),
+                                conv_3x3_bnrelu(128))
+                #(nn.Conv2d(128, 128, 1, stride=1, padding=0, bias=False),
+        
+        self.up2 = nn.ConvTranspose2d(128, 64, 2, 2)
+        self.d2 = nn.Sequential(nn.Conv2d(128, 64, 3, stride=1, padding=1, bias=False),
+                                nn.Conv2d(64, 64, 3, stride=1, padding=1, bias=False),
+                                nn.ReLU(inplace=True),
+                                RET(64),
+                                conv_3x3_bnrelu(64))
+            
+        self.up1 = nn.ConvTranspose2d(64, 32, 2, 2)
+        self.d1 = nn.Sequential(nn.Conv2d(64, 32, 3, stride=1, padding=1, bias=False),
+                                nn.Conv2d(32, 32, 3, stride=1, padding=1, bias=False),
+                                nn.ReLU(inplace=True),
+                                RET(32),
+                                conv_3x3_bnrelu(32))
+        self.last = nn.Conv2d(32, 1, 1, stride=1, padding=0, bias=False)
+
+
+
+        #  self.upsample2x = decoder_upsample(2)
+        # TODO: pytorch still require the channel eventhough its ignored
+        # self.weights_init()
+
+    def forward(self, x):
+        TAG = self.module_name + '[forward]'
+        outputs = []
+        if self.debug: print(TAG, '[x]', x.shape)
+
+        # Encoder
+        enc1 = self.e1(x)
+        if self.debug: print(TAG, '[enc1]', enc1.shape)
+        enc2 = self.e2(self.pool1(enc1))
+        if self.debug: print(TAG, '[enc2]', enc2.shape)
+        enc3 = self.e3(self.pool2(enc2))
+        if self.debug: print(TAG, '[enc3]', enc3.shape)
+        enc4 = self.e4(self.pool3(enc3))
+        if self.debug: print(TAG, '[enc4]', enc4.shape)
+
+        # Bottleneck
+        bottleneck = self.bottle_neck(self.pool4(enc4))
+        if self.debug: print(TAG, '[bottleneck]', bottleneck.shape)
+        outputs.append(bottleneck)
+
+        # Decoder
+        dec4 = self.up4(bottleneck)
+        if self.debug: print(TAG, '[dec4][up4]', dec4.shape)
+        dec4 = torch.cat((dec4, enc4), dim=1)
+        if self.debug: print(TAG, '[dec4][cat]', dec4.shape)
+        dec4 = self.d4(dec4)
+        if self.debug: print(TAG, '[dec4][d4]', dec4.shape)
+        outputs.append(dec4)
+
+        dec3 = self.up3(dec4)
+        if self.debug: print(TAG, '[dec3][up3]', dec3.shape)
+        dec3 = torch.cat((dec3, enc3), dim=1)
+        if self.debug: print(TAG, '[dec3][cat]', dec3.shape)
+        dec3 = self.d3(dec3)
+        if self.debug: print(TAG, '[dec3]', dec3.shape)
+        outputs.append(dec3)
+
+        dec2 = self.up2(dec3)
+        if self.debug: print(TAG, '[dec2][up2]', dec2.shape)
+        dec2 = torch.cat((dec2, enc2), dim=1)
+        if self.debug: print(TAG, '[dec2][cat]', dec2.shape)
+        dec2 = self.d2(dec2)
+        if self.debug: print(TAG, '[dec2]', dec2.shape)
+        outputs.append(dec2)
+
+        dec1 = self.up1(dec2)
+        if self.debug: print(TAG, '[dec1][up1]', dec1.shape)
+        dec1 = torch.cat((dec1, enc1), dim=1)
+        if self.debug: print(TAG, '[dec1][cat]', dec1.shape)
+        dec1 = self.d1(dec1)
+        if self.debug: print(TAG, '[dec1]', dec1.shape)
+        outputs.append(dec1)
+
+        return outputs
+        # return torch.sigmoid(self.last(dec1))

@@ -118,3 +118,7 @@ mmseg/.mim
 
 # Pytorch
 *.pth
+
+trained_models/
+temps/
+checkpoints/

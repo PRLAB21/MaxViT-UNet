@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import collections
-
+import numpy as np
+import cv2
 from mmcv.utils import build_from_cfg
 
 from ..builder import PIPELINES
@@ -41,6 +42,14 @@ class Compose(object):
             data = t(data)
             if data is None:
                 return None
+        # print('[compose][Compose][data]', data)
+        # img = data['img'].data.numpy().transpose((1, 2, 0))
+        # gt_semantic_seg = data['gt_semantic_seg'].data.numpy().transpose((1, 2, 0))
+        # print(type(img), type(gt_semantic_seg))
+        # print(img.shape, gt_semantic_seg.shape, np.unique(gt_semantic_seg))
+        # cv2.imwrite('img.png', img)
+        # cv2.imwrite('gt_semantic_seg.png', gt_semantic_seg)
+        # exit()
         return data
 
     def __repr__(self):
