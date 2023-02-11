@@ -11,9 +11,9 @@ from sklearn.metrics import auc
 from pycocotools.coco import COCO
 
 from mmcv import Config
-from mmdet.apis import set_random_seed, init_detector
+from mmseg.apis import set_random_seed, init_detector
 
-from mmdet.utils.lysto_utils import *
+from mmseg.utils.lysto_utils import *
 
 MMSEG_HOME_PATH = '/home/zunaira/maskrcnn-lymphocyte-detection/mmdetection'
 set_random_seed(0, deterministic=False)

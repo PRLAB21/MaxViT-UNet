@@ -9,7 +9,7 @@ MMSEG_HOME_PATH='/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation'
 # python3 $MMSEG_HOME_PATH"/tools/train.py" $MMSEG_HOME_PATH"/configs/lysto/fcn_unet_s5_s3.py"
 # python3 $MMSEG_HOME_PATH"/tools/train.py" $MMSEG_HOME_PATH"/configs/lysto/efficient_unet_b5_s1.py"
 # python3 $MMSEG_HOME_PATH"/tools/train.py" $MMSEG_HOME_PATH"/configs/lysto/efficient_unet_b5_s2.py"
-python3 $MMSEG_HOME_PATH"/tools/train.py" $MMSEG_HOME_PATH"/configs/lysto/seglymphnet3_s2.py"
+python3 $MMSEG_HOME_PATH"/tools/train.py" $MMSEG_HOME_PATH"/configs/lysto/mobilenet_v3_s1.py"
 
 # python3 $MMSEG_HOME_PATH"/tools/train.py" $MMSEG_HOME_PATH"/configs/lysto/seglymphnet2_s2.py"
 # python3 $MMSEG_HOME_PATH"/tools/kfold-cross-valid.py" $MMSEG_HOME_PATH"/configs/lysto_lymph_vs_nolymph/resnet50_s1.py" --num-splits 5

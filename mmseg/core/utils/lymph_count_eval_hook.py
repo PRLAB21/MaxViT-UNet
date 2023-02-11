@@ -26,8 +26,8 @@ class LymphCountEvalHook(Hook):
             self.cfg.data.train.ann_file = f'{self.cfg.PATH_DATASET}/cross-validation-f5-test-coco/fold_{self.fold}_train.json'
             self.cfg.data.val.ann_file = f'{self.cfg.PATH_DATASET}/cross-validation-f5-test-coco/fold_{self.fold}_val.json'
             self.cfg.data.test.ann_file = f'{self.cfg.PATH_DATASET}/cross-validation-f5-test-coco/fold_{self.fold}_val.json'
-        self.cfg.data.samples_per_gpu = 16
-        self.cfg.data.workers_per_gpu = 8
+        self.cfg.data.samples_per_gpu = 4
+        self.cfg.data.workers_per_gpu = 4
         self.base_dir = os.path.join(self.cfg.work_dir, base_dir)
         self.outputs_path = {
             'val': os.path.join(self.base_dir, 'outputs_val'), 

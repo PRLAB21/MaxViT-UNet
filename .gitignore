@@ -122,3 +122,6 @@ mmseg/.mim
 trained_models/
 temps/
 checkpoints/
+ensemble_results/
+tf_runs/
+model_archs/
