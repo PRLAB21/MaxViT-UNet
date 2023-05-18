@@ -67,7 +67,7 @@ def _concat_dataset(cfg, default_args=None):
 def build_dataset(cfg, default_args=None):
     """Build datasets."""
     from .dataset_wrappers import (ConcatDataset, MultiImageMixDataset,
-                                   RepeatDataset)
+                                   RepeatDataset, KFoldDataset)
     if isinstance(cfg, (list, tuple)):
         dataset = ConcatDataset([build_dataset(c, default_args) for c in cfg])
     elif cfg['type'] == 'RepeatDataset':
@@ -78,6 +78,13 @@ def build_dataset(cfg, default_args=None):
         cp_cfg['dataset'] = build_dataset(cp_cfg['dataset'])
         cp_cfg.pop('type')
         dataset = MultiImageMixDataset(**cp_cfg)
+    elif cfg['type'] == 'KFoldDataset':
+        cp_cfg = copy.deepcopy(cfg)
+        if cp_cfg.get('test_mode', None) is None:
+            cp_cfg['test_mode'] = (default_args or {}).pop('test_mode', False)
+        cp_cfg['dataset'] = build_dataset(cp_cfg['dataset'], default_args)
+        cp_cfg.pop('type')
+        dataset = KFoldDataset(**cp_cfg)
     elif isinstance(cfg.get('img_dir'), (list, tuple)) or isinstance(
             cfg.get('split', None), (list, tuple)):
         dataset = _concat_dataset(cfg, default_args)

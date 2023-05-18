@@ -17,7 +17,7 @@ class SegmenterMaskTransformerHead(BaseDecodeHead):
     """Segmenter: Transformer for Semantic Segmentation.
 
     This head is the implementation of
-    `Segmenter:　<https://arxiv.org/abs/2105.05633>`_.
+    `Segmenter: <https://arxiv.org/abs/2105.05633>`_.
 
     Args:
         backbone_cfg:(dict): Config of backbone of

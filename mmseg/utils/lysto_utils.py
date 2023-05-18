@@ -12,6 +12,16 @@ from mmseg.core.utils import ml_metrics
 
 TAG = '[lysto_utils]'
 
+def sort_names(image_name):
+    if image_name.startswith('training'):
+        return ('training', int(image_name[9:-4]), 0)
+    elif image_name.startswith('test'):
+        return ('test', int(image_name[5:-4]), 0)
+    elif image_name.startswith('ROI'):
+        return ('ROI', int(image_name[4:-4].split('-')[0]), image_name[4:-4].split('-')[1])
+    else:
+        return ('z', 0, 0)
+
 def normalize_255(image):
     image = image - image.min()
     image = image / image.max()
@@ -354,6 +364,31 @@ def calculate_centroids_csv(outputs, dataset, path_centroids_csv, labels_csv=Non
     df_centroids_info.to_csv(path_centroids_csv, index=False)
     print(TAG, f'\ncsv saved at {path_centroids_csv}\n')
 
+def calculate_centroids_csv_mmseg(outputs, dataset, path_centroids_csv, debug=False):
+    columns = ['image_id', 'x', 'y']
+    print(TAG, '[columns]', columns)
+    centroids_info = {key: [] for key in columns}
+    
+    # iterate over all dataset images
+    for id, image_name in enumerate(mmcv.track_iter_progress(dataset)):
+        # image_name = image_name[:-4] + '.png'
+        # row = labels_csv[labels_csv.x == image_name] if labels_csv is not None else None
+
+        # get model's prediction
+        dt_mask = outputs[id]
+        dt_contours, dt_count1 = get_contours_from_mask(mask_image=dt_mask)
+        dt_bboxes = get_bboxes_from_contours(dt_contours)
+
+        # append data of filtered bboxes in dictionary
+        for box in dt_bboxes:
+            centroids_info['image_id'].append(image_name)
+            centroids_info['x'].append((box[0] + box[2]) / 2)
+            centroids_info['y'].append((box[1] + box[3]) / 2)
+
+    df_centroids_info = pd.DataFrame(centroids_info)
+    df_centroids_info.to_csv(path_centroids_csv, index=False)
+    print(TAG, f'\ncsv saved at {path_centroids_csv}\n')
+
 def calculate_statistics_csv(outputs, dataset, gt_mask_dir, path_statistics_csv, debug=False):
     TAG2 = TAG + '[calculate_statistics_csv]'
     columns = ['distance', 'image_name', 'gt_count', 'dt_count_d0', 'dt_count_d12']
@@ -407,7 +442,7 @@ def calculate_statistics_csv(outputs, dataset, gt_mask_dir, path_statistics_csv,
         df_image_info.to_csv(path_statistics_csv, index=False)
         print(TAG, f'\ncsv saved at {path_statistics_csv}\n')
 
-def calculate_counts_csv(outputs, dataset, path_statistics_csv, d=12, threshold=0.5, is_segmentation=True, debug=False):
+def calculate_counts_csv(outputs, dataset, path_counts_csv, d=12, threshold=0.5, is_segmentation=True, debug=False):
     columns = ['id', 'count']
     image_info = {key: [] for key in columns}
     threshold = np.round(threshold, 2)
@@ -447,9 +482,51 @@ def calculate_counts_csv(outputs, dataset, path_statistics_csv, d=12, threshold=
         image_info['count'].append(dt_count)
 
     df_image_info = pd.DataFrame(image_info)
-    # path_statistics_csv = path_statistics_csv[:-4] + f'-d_{d}-t_{int(threshold*100)}.csv'
-    df_image_info.to_csv(path_statistics_csv, index=False)
-    print(TAG, f'\ncsv saved at {path_statistics_csv}\n')
+    # path_counts_csv = path_counts_csv[:-4] + f'-d_{d}-t_{int(threshold*100)}.csv'
+    df_image_info.to_csv(path_counts_csv, index=False)
+    print(TAG, f'\ncsv saved at {path_counts_csv}\n')
+
+def calculate_counts_csv_mmseg(outputs, dataset, path_counts_csv, d=12, debug=False):
+    columns = ['id', 'count']
+    image_info = {key: [] for key in columns}
+
+    # iterate over all dataset images
+    print(TAG, f'd={d}')
+    for id, image_name in tqdm(enumerate(dataset), total=len(dataset)):
+        # store info
+        image_info['id'].append(int(image_name[5:-4]))
+        # get model prediction
+        dt_mask = outputs[id]
+
+        dt_contours, dt_count1 = get_contours_from_mask(mask_image=dt_mask)
+        dt_bboxes = get_bboxes_from_contours(dt_contours)
+        dt_count1 = len(dt_bboxes)
+
+        merged = []
+        if dt_count1 > 0:
+            # get centroid (x, y) of remaining bounding boxes
+            centroid_x = (dt_bboxes[:, 0] + dt_bboxes[:, 2]) / 2
+            centroid_y = (dt_bboxes[:, 1] + dt_bboxes[:, 3]) / 2
+            if d > 0:
+                for j in range(0, dt_count1 - 1):
+                    if j not in merged:
+                        for k in range(j + 1, dt_count1):
+                            diff_x = np.square(np.float32(centroid_x[j] - centroid_x[k]))
+                            diff_y = np.square(np.float32(centroid_y[j] - centroid_y[k]))
+                            distance = int(np.sqrt(diff_x + diff_y))
+                            if distance <= d:
+                                merged.append(k)
+        # else:
+        #     print(TAG2, '[dt_bboxes]', len(dt_bboxes), image_name)
+
+        # get new filtered detection count
+        dt_count2 = int(dt_count1 - len(merged))
+        image_info['count'].append(dt_count2)
+
+    df_image_info = pd.DataFrame(image_info)
+    # path_counts_csv = path_counts_csv[:-4] + f'-d_{d}-t_{int(threshold*100)}.csv'
+    df_image_info.to_csv(path_counts_csv, index=False)
+    print(TAG, f'\ncsv saved at {path_counts_csv}\n')
 
 # def calculate_pr_curve(path_statistics_csv, thresholds, title, path_pr_curve):
 #     df_image_info = pd.read_csv(path_statistics_csv)

@@ -3,33 +3,46 @@ model = dict(
     type='EncoderDecoder',
     pretrained=None,
     backbone=dict(
-        type='MaxVitTimm', arch='maxvit_rmlp_nano_rw_256', pretrained=True),
-    neck=dict(
-        type='MultiLevelNeck',
-        in_channels=[64, 128, 256, 512],
-        out_channels=512,
-        scales=[4, 2, 1, 0.5]),
+        type='MaxViT',
+        in_channels=3,
+        depths=(2, 2, 2, 2),
+        channels=(64, 128, 256, 512),
+        embed_dim=64,
+        num_heads=32,
+        grid_window_size=(8, 8),
+        attn_drop=0.1,
+        drop=0.1,
+        drop_path=0.1,
+        mlp_ratio=4),
     decode_head=dict(
-        type='UPerHead',
-        in_channels=[512, 512, 512, 512],
-        in_index=[0, 1, 2, 3],
-        pool_scales=(1, 2, 3, 6),
-        channels=256,
+        type='MaxViTDecoder',
+        in_channels=[64, 128, 256, 512],
+        output_size=(256, 256),
+        num_heads=32,
+        grid_window_size=(8, 8),
+        attn_drop=0.1,
+        drop=0.1,
+        drop_path=0.1,
         dropout_ratio=0.1,
+        mlp_ratio=4.0,
+        channels=64,
         num_classes=2,
         norm_cfg=dict(type='SyncBN', requires_grad=True),
         align_corners=False,
         loss_decode=[
             dict(
                 type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=1.0),
-            dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)
-        ],
-        output_channels=1),
+            dict(
+                type='DiceLoss',
+                loss_name='loss_dice',
+                loss_weight=5.0,
+                ignore_index=0)
+        ]),
     auxiliary_head=dict(
         type='FCNHead',
-        in_channels=512,
-        in_index=3,
-        channels=256,
+        in_channels=64,
+        in_index=0,
+        channels=64,
         num_convs=1,
         concat_input=False,
         dropout_ratio=0.1,
@@ -39,15 +52,20 @@ model = dict(
         loss_decode=[
             dict(
                 type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=1.0),
-            dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)
-        ],
-        output_channels=1),
+            dict(
+                type='DiceLoss',
+                loss_name='loss_dice',
+                loss_weight=5.0,
+                ignore_index=0)
+        ]),
     train_cfg=dict(),
-    test_cfg=dict(mode='whole'))
-dataset_type = 'LystoDataset'
-data_root = '/home/gpu02/maskrcnn-lymphocyte-detection/datasets/lysto'
+    test_cfg=dict(mode='slide', crop_size=(256, 256), stride=(170, 170)))
+dataset_type = 'MoNuSegDataset'
+data_root = '/home/gpu02/maskrcnn-lymphocyte-detection/datasets/MoNuSeg'
 img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+    mean=[171.3095, 119.6935, 157.7024],
+    std=[56.044, 59.6094, 47.6912],
+    to_rgb=True)
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -87,70 +105,72 @@ data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
-        type='LystoDataset',
-        data_root='/home/gpu02/maskrcnn-lymphocyte-detection/datasets/lysto',
-        img_dir='train_IHC',
-        ann_dir='train_circular_masks_label',
-        split='mmseg_splits/train_circular_masks.txt',
+        type='MoNuSegDataset',
+        data_root=
+        '/home/gpu02/maskrcnn-lymphocyte-detection/datasets/MoNuSeg/raw/train',
+        img_dir='imgs',
+        ann_dir='masks_pngs_label',
+        split='mmseg_splits.txt',
         pipeline=[
             dict(type='LoadImageFromFile'),
             dict(type='LoadAnnotations'),
             dict(type='Resize', img_scale=(256, 256), keep_ratio=True),
+            dict(type='RandomAffine'),
             dict(type='RandomFlip', flip_ratio=0.5, direction='horizontal'),
             dict(type='RandomFlip', flip_ratio=0.5, direction='vertical'),
             dict(type='PhotoMetricDistortion'),
             dict(
                 type='Normalize',
-                mean=[123.675, 116.28, 103.53],
-                std=[58.395, 57.12, 57.375],
+                mean=[171.3095, 119.6935, 157.7024],
+                std=[56.044, 59.6094, 47.6912],
                 to_rgb=True),
             dict(type='Pad', size=(256, 256), pad_val=0, seg_pad_val=255),
             dict(type='DefaultFormatBundle'),
             dict(type='Collect', keys=['img', 'gt_semantic_seg'])
         ]),
     val=dict(
-        type='LystoDataset',
-        data_root='/home/gpu02/maskrcnn-lymphocyte-detection/datasets/lysto',
-        img_dir='val_IHC',
-        ann_dir='val_circular_masks_label',
-        split='mmseg_splits/val_circular_masks.txt',
+        type='MoNuSegDataset',
+        data_root=
+        '/home/gpu02/maskrcnn-lymphocyte-detection/datasets/MoNuSeg/raw/test',
+        img_dir='imgs',
+        ann_dir='masks_pngs_label',
+        split='mmseg_splits.txt',
         pipeline=[
             dict(type='LoadImageFromFile'),
             dict(
                 type='MultiScaleFlipAug',
-                img_scale=(224, 224),
+                img_scale=(256, 256),
                 flip=False,
                 transforms=[
                     dict(type='Resize', keep_ratio=True),
-                    dict(type='RandomFlip'),
                     dict(
                         type='Normalize',
-                        mean=[123.675, 116.28, 103.53],
-                        std=[58.395, 57.12, 57.375],
+                        mean=[171.3095, 119.6935, 157.7024],
+                        std=[56.044, 59.6094, 47.6912],
                         to_rgb=True),
                     dict(type='ImageToTensor', keys=['img']),
                     dict(type='Collect', keys=['img'])
                 ])
         ]),
     test=dict(
-        type='LystoDataset',
-        data_root='/home/gpu02/maskrcnn-lymphocyte-detection/datasets/lysto',
-        img_dir='test_IHC',
-        ann_dir='test_circular_masks_label',
-        split='mmseg_splits/test_circular_masks.txt',
+        type='MoNuSegDataset',
+        data_root=
+        '/home/gpu02/maskrcnn-lymphocyte-detection/datasets/MoNuSeg/raw/test',
+        img_dir='imgs',
+        ann_dir='masks_pngs_label',
+        split='mmseg_splits.txt',
         pipeline=[
             dict(type='LoadImageFromFile'),
             dict(
                 type='MultiScaleFlipAug',
-                img_scale=(224, 224),
+                img_scale=(256, 256),
                 flip=False,
                 transforms=[
                     dict(type='Resize', keep_ratio=True),
-                    dict(type='RandomFlip'),
                     dict(
                         type='Normalize',
-                        mean=[123.675, 116.28, 103.53],
-                        std=[58.395, 57.12, 57.375],
+                        mean=[171.3095, 119.6935, 157.7024],
+                        std=[56.044, 59.6094, 47.6912],
                         to_rgb=True),
                     dict(type='ImageToTensor', keys=['img']),
                     dict(type='Collect', keys=['img'])
@@ -166,50 +186,32 @@ load_from = None
 resume_from = None
 workflow = [('train', 1), ('val', 1)]
 cudnn_benchmark = True
-optimizer = dict(
-    type='AdaBelief',
-    lr=0.001,
-    eps=1e-08,
-    betas=(0.9, 0.999),
-    weight_decay=0.01,
-    weight_decouple=True,
-    rectify=False)
+optimizer = dict(type='AdamW', lr=0.005, betas=(0.9, 0.999), weight_decay=0.01)
 optimizer_config = dict()
 lr_config = dict(
-    policy='poly',
+    policy='CosineAnnealing',
     warmup='linear',
-    warmup_iters=1500,
-    warmup_ratio=1e-06,
-    power=1.0,
-    min_lr=0.0,
-    by_epoch=True)
+    warmup_iters=100,
+    warmup_ratio=0.1,
+    min_lr_ratio=0.001)
 runner = dict(type='EpochBasedRunner', max_epochs=50)
-checkpoint_config = dict(by_epoch=True, interval=1)
+checkpoint_config = dict(by_epoch=True, interval=10)
 evaluation = dict(
-    interval=2, metric=['mIoU', 'mDice'], pre_eval=True, save_best=True)
+    interval=1,
+    metric=['mIoU', 'mDice', 'mFscore'],
+    pre_eval=True,
+    save_best='mDice')
 MMSEG_HOME_PATH = '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation'
 DATASET_HOME_PATH = '/home/gpu02/maskrcnn-lymphocyte-detection/datasets'
 S = 1
-DATASET = 'lysto'
-MODEL_NAME = 'upernet_maxvit_timm'
-PATH_DATASET = '/home/gpu02/maskrcnn-lymphocyte-detection/datasets/lysto'
-CONFIG_FILE_NAME = 'upernet_maxvit_timm_s1'
-PATH_CONFIG_FILE = '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation/configs/lysto/upernet_maxvit_timm_s1.py'
-PATH_WORK_DIR = '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation/trained_models/lysto/upernet_maxvit_timm/setting1/'
-custom_imports = dict(
-    imports=['mmseg.core.utils.lymph_count_eval_hook'],
-    allow_failed_imports=False)
-classes = ('background', 'lymphocyte')
-custom_hooks = [
-    dict(
-        type='LymphCountEvalHook',
-        eval_interval=2,
-        file_prefix='upernet_maxvit_timm_s1',
-        path_config=
-        '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation/configs/lysto/upernet_maxvit_timm_s1.py',
-        base_dir='eval1_circular_masks_label')
-]
-work_dir = '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation/trained_models/lysto/upernet_maxvit_timm/setting1/'
+DATASET = 'MoNuSeg'
+MODEL_NAME = 'maxvit_unet'
+PATH_DATASET = '/home/gpu02/maskrcnn-lymphocyte-detection/datasets/MoNuSeg'
+CONFIG_FILE_NAME = 'maxvit_unet_s1'
+PATH_CONFIG_FILE = '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation/configs/MoNuSeg/maxvit_unet_s1.py'
+PATH_WORK_DIR = '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation/trained_models/MoNuSeg/maxvit_unet/setting1/'
+classes = ('background', 'nuclei')
+work_dir = '/home/gpu02/maskrcnn-lymphocyte-detection/mmsegmentation/trained_models/MoNuSeg/maxvit_unet/setting1/'
 total_epochs = 50
 max_epochs = 50
 seed = 0

@@ -115,8 +115,10 @@ def parse_args():
     return args
 
 
+TAG = '[mmclassification/tools/test.py]'
 def main():
     args = parse_args()
+    print(TAG, '[args]\n', args)
     assert args.out or args.eval or args.format_only or args.show \
         or args.show_dir, \
         ('Please specify at least one operation (save/eval/format/show the '
@@ -206,7 +208,7 @@ def main():
     })
     test_loader_cfg = {
         **loader_cfg,
-        'samples_per_gpu': 1,
+        # 'samples_per_gpu': 1,
         'shuffle': False,  # Not shuffle by default
         **cfg.data.get('test_dataloader', {})
     }
@@ -260,6 +262,7 @@ def main():
         tmpdir = None
 
     cfg.device = get_device()
+    # print(TAG, '[cfg]\n', cfg.pretty_text)
     if not distributed:
         warnings.warn(
             'SyncBN is only supported with DDP. To be compatible with DP, '

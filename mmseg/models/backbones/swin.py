@@ -715,8 +715,10 @@ class SwinTransformer(BaseModule):
                 k for k in state_dict.keys()
                 if 'relative_position_bias_table' in k
             ]
+            current_state_dict = self.state_dict()
             for table_key in relative_position_bias_table_keys:
                 table_pretrained = state_dict[table_key]
+                if table_key not in current_state_dict: continue
                 table_current = self.state_dict()[table_key]
                 L1, nH1 = table_pretrained.size()
                 L2, nH2 = table_current.size()
@@ -737,6 +739,7 @@ class SwinTransformer(BaseModule):
 
     def forward(self, x):
         x, hw_shape = self.patch_embed(x)
+        # print('[SwinTransformer]', '[x, hw_shape]', x.shape, hw_shape)
 
         if self.use_abs_pos_embed:
             x = x + self.absolute_pos_embed
@@ -745,6 +748,7 @@ class SwinTransformer(BaseModule):
         outs = []
         for i, stage in enumerate(self.stages):
             x, hw_shape, out, out_hw_shape = stage(x, hw_shape)
+            # print('[SwinTransformer]', '[x, hw_shape, out, out_hw_shape]', x.shape, hw_shape, out.shape, out_hw_shape)
             if i in self.out_indices:
                 norm_layer = getattr(self, f'norm{i}')
                 out = norm_layer(out)
