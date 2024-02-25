@@ -88,7 +88,7 @@ tools/dist_test.sh "configs/maxvit_unet/maxvit_unet_s1.py" "path/to/checkpoint.p
   |MaxViT-UPerNet | 0.8176 | 0.6914 |
   |MaxViT-UNet | 0.8378 | 0.7208 |
 
-MaxViT-UNet weights trained on MoNuSeg18 can be downloaded from [here](https://drive.google.com/file/d/111D2K5TMh-gAG5ycN8VB2lxjXGGoiY79/view?usp=share_link).
+MaxViT-UNet weights trained on MoNuSeg18 can be downloaded from [here](https://drive.google.com/file/d/1VmS1rjFPE9_mb-KM7-0APpUtHMtiX6u_/view?usp=sharing).
 
 ---
 
